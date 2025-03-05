@@ -1,0 +1,93 @@
+Here are some notes on setting up dbt in GitHub Codespaces:
+
+
+Create CodeSpace
+
+At terminal - Need to:
+-- Install dbt
+pip install dbt
+
+-- xMake a folder for the project 
+-- not needed - mkdir sf_dbt_marketing_project
+
+
+-- Install dbt-core
+pip install dbt-core
+
+
+-- Need snowflake connector for profile
+python -m pip install dbt-snowflake
+
+-- Initialize your project (will ask for project name)
+dbt init
+
+If you have the Snowflake connector setup, the init step will ask for profile parameters
+
+Including - Account:
+for example 'https://nyylftt-rib90930.snowflakecomputing.com'  
+you would use: nyylftt-rib90930
+
+DB
+Schema
+User/Role
+PW
+
+After this is setup you can run 
+
+dbt debug
+
+-- I did have to switch to the folder for the profile.yml file to be read:
+@anderskd12 ➜ /workspaces/SF_dbt_Marketing (main) $ cd SF_DBT_MARKETING
+@anderskd12 ➜ /workspaces/SF_dbt_Marketing/SF_DBT_MARKETING (main) $ dbt debug
+
+dbt debug results will show the path to the profile.yml if you need to modify that.
+
+
+When you run 'dbt run'  the models in the models folder will be run.
+
+Customize, add in this folder
+You can specify specific models to run and options (materialized) as well as part of dbt run
+
+
+
+
+
+bin ------------------------------------------------------------------------
+--- 
+-- find where profiles is located:
+dbt debug --config-dir
+
+-- switch to that directory
+cd /home/codespace/.dbt
+
+-- create a profiles.yml file
+touch profiles.yml
+
+-- open the file
+code profiles.yml
+
+
+sf_dbt_marketing_project:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: rib90930
+
+      # User/password auth
+      user: kadmin
+      password: SFPac
+      role: accountadmin
+      database: LEARNING_MKT 
+      warehouse: COMPUTE_WH
+      schema: LEARNING_SCHEMA
+      threads: 1
+      client_session_keep_alive: False
+      query_tag: Blank
+
+      # optional
+      connect_retries: 0 # default 0
+      connect_timeout: 10 # default: 10
+      retry_on_database_errors: False # default: false
+      retry_all: False  # default: false
+      reuse_connections: True # default: True if client_session_keep_alive is False, otherwise None

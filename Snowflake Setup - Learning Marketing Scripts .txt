@@ -1,4 +1,3 @@
-
 -- LEARNING MKT DATABASE AND SECURITY SETUP -----------------------------------------------------------
 CREATE DATABASE Learning_MKT 
 
@@ -23,7 +22,6 @@ GRANT OWNERSHIP ON SCHEMA LEARNING_SCHEMA TO ROLE LEARNING_ADMIN
 
 
 
-
 GRANT USAGE
   ON WAREHOUSE COMPUTE_WH
   TO ROLE Learning_Admin;
@@ -39,8 +37,8 @@ GRANT ROLE LEARNING_ADMIN TO USER KADMIN;
 
 
 -- CREATE SOME TEST TABLES FOR HOLDING MARKETING DATA --------------------------------------------------
-USE DATABASE LEARNING_MKT 
-USE SCHEMA LEARNING_SCHEMA
+USE DATABASE LEARNING_MKT; 
+USE SCHEMA LEARNING_SCHEMA;
 
 -- SETUP SOME PRODUCT_AD DATA BY SUBJECT TYPE 
 DROP TABLE PRODUCTS_ADS 
@@ -50,6 +48,7 @@ CREATE TABLE PRODUCTS_ADS
     TYPE_OF_AD STRING,
     AD_LOCATION STRING,
     AD_ID INTEGER)
+
 DELETE FROM PRODUCTS_ADS 
 
 AGE_APP
@@ -103,32 +102,113 @@ CREATE TABLE CLICK_ACTIVITY
 DATE_AD DATE,
 CLICKS  INTEGER)
 
+
+-- ***********************************************************************************************************************************
+-- ***********************************************************************************************************************************
+-- SETTING UP S3 BUCKET - SEE AWS IAM, ROLE, AND BUCKET FOR SETUP - YAML
+-- ***********************************************************************************************************************************
+-- ***********************************************************************************************************************************
+
+CREATE OR REPLACE STORAGE INTEGRATION my_s3_integration_v3
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = S3
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::567561414578:role/sf_marketing_ka2_s3'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://snowflake-marketing-ka-2025/Adds_Clicks_101-104.csv');  
+
+  DESC INTEGRATION  my_s3_integration_v3
+
+
+-- COPIED FROM S3!!!
+COPY INTO CLICK_ACTIVITY
+FROM @MKT_STAGE_K_2025
+FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1)
+;
+
+
+SELECT * FROM CLICK_ACTIVITY
+
+SELECT AD_ID, SUM(CLICKS) FROM CLICK_ACTIVITY
+GROUP BY AD_ID
+
+
+
+*** IN AWS - SETUP ROLE: *********************************************************************************
+AWS ACCOUNT:  567561414578
+NAME:  sf_marketing_ka2_s3
+PERMISSIONS:  AmazonS3ReadOnlyAccess
+
+
+TRUSTED ENTITIES:
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::730812497434:user/yt501000-s"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "SRB08229_SFCRole=1_UlQh0NkXwGAnt5EB4wRWfk8QG4Y="
+                }
+            }
+        }
+    ]
+}
+
+
+
+*** BUCKET POLICY!!!  ***************************************************************************************
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowSnowflakeRoleAccess",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::567561414578:role/sf_marketing_ka2_s3"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::snowflake-marketing-ka-2025/*"
+        }
+    ]
+}
+
+
+--- BIN -------------------------------------------------------------------------------------------------------------------------
+--- BIN -------------------------------------------------------------------------------------------------------------------------
+--- BIN -------------------------------------------------------------------------------------------------------------------------
+
+-- RANDOM MANUAL DATA FOR TESTING ------- REPLACED BY AWS S3 DATASET -------------------
+
 DELETE FROM CLICK_ACTIVITY 
 
 INSERT INTO CLICK_ACTIVITY VALUES 
  (101, '01/01/2025', 23),
  (101, '01/02/2025', 30),
- (101, '01/03/2025', 10)
+ (101, '01/03/2025', 10);
 
 INSERT INTO CLICK_ACTIVITY VALUES 
  (102, '01/01/2025', 300),
  (102, '01/02/2025', 400),
- (102, '01/03/2025', 540)
+ (102, '01/03/2025', 540);
 
 INSERT INTO CLICK_ACTIVITY VALUES 
  (103, '01/01/2025', 1300),
  (103, '01/02/2025', 1400),
- (103, '01/03/2025', 1540)
+ (103, '01/03/2025', 1540);
 
 INSERT INTO CLICK_ACTIVITY VALUES 
  (104, '01/01/2025', 30),
  (104, '01/02/2025', 40),
- (104, '01/03/2025', 50)
+ (104, '01/03/2025', 50);
 
 INSERT INTO CLICK_ACTIVITY VALUES 
  (105, '01/01/2025', 3),
  (106, '01/02/2025', 40),
- (107, '01/03/2025', 540)
+ (107, '01/03/2025', 540);
 
 
 SELECT * FROM PRODUCTS_ADS AS P 
@@ -138,6 +218,7 @@ JOIN CLICK_ACTIVITY AS C ON
     C.AD_ID = A.AD_ID 
 
 DROP VIEW VW_ADS 
+
 CREATE  VIEW VW_ADS AS (
 SELECT P.AD_ID, PRODUCT, SUBJECT_MATTER, TYPE_OF_AD, AD_LOCATION, COST_PER_DAY, DATE_AD, CLICKS FROM PRODUCTS_ADS AS P 
 JOIN ADS_COSTS AS A ON 
@@ -173,8 +254,10 @@ CREATE VIEW VSF_CLICKS_ACTIVITY AS
 -- LETS NOW:
     -- CREATE A TASK TO GENERATE DATA TO THE RAW_CLICK_ACTIVITY TABLE 
 
+    
 -- THEN USE DBT TO TRANSFORM THE RAW_CLICK_ACTIVITY TO SUM BY DATE AND AD_ID 
     -- AND MOVE IT TO THE CLICK_ACTIVITY WHICH IS GROUPED BY AD_ID AND DATE 
+
 
 
 -- THERE WAS A SECURITY ISSUE WITH THE ROLE - 
@@ -184,11 +267,6 @@ WITH VSF_CLICKS_ACTIVITY AS
 (SELECT CLICK_DATE, AD_ID, COUNT(*) AS TOTAL_CLICKS FROM LEARNING_MKT.LEARNING_SCHEMA.RAW_CLICK_ACTIVITY GROUP BY CLICK_DATE, AD_ID)
 
 SELECT * FROM VSF_CLICKS_ACTIVITY
-
-
-
-
-
 
     
 

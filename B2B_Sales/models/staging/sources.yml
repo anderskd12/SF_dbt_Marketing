@@ -1,0 +1,78 @@
+# models/staging/sources.yml
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw data tables from various systems"
+    database: B2B_SALES  # Your Snowflake database name
+    schema: B2B_SALES    # Your Snowflake schema name
+    
+    tables:
+      - name: ticket_sales_raw
+        description: "Raw ticket sales transactions from the sales system"
+        columns:
+          - name: transaction_id
+            description: "Unique identifier for each transaction"
+            tests:
+              - unique
+              - not_null
+              
+          - name: seller_id
+            description: "ID of the seller who made the sale"
+            tests:
+              - not_null
+              
+          - name: seller_type
+            description: "Type/category of seller"
+            tests:
+              - accepted_values:
+                  values: ['Internal', 'Partner', 'Reseller', 'Direct']
+                  
+          - name: event_name
+            description: "Name of the event for which tickets were sold"
+            tests:
+              - not_null
+              
+          - name: number_of_purchased_tickets
+            description: "Number of tickets purchased in this transaction"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1
+                  max_value: 1000
+                  
+          - name: total_amount
+            description: "Total amount paid for the tickets"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+                  inclusive: false
+                  
+          - name: sales_channel
+            description: "Channel through which the sale was made"
+            tests:
+              - accepted_values:
+                  values: ['Online', 'Phone', 'In-Person', 'Mobile App']
+                  
+          - name: customer_first_name
+            description: "Customer's first name"
+            
+          - name: customer_last_name  
+            description: "Customer's last name"
+            
+          - name: office_location
+            description: "Office location where the sale was processed"
+            
+          - name: created_date
+            description: "Timestamp when the transaction was created"
+            tests:
+              - not_null
+
+        # Freshness check - alert if data is more than 1 day old
+        freshness:
+          warn_after: {count: 1, period: day}
+          error_after: {count: 2, period: day}
+          
+        # Loaded at check - useful for debugging data pipeline issues  
+        loaded_at_field: created_date
